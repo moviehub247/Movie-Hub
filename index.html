@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Movie Hub</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b0e17;color:#fff;font-family:Arial,sans-serif}
+header{padding:18px 5%;display:flex;justify-content:space-between;align-items:center;background:#101522;position:sticky;top:0;z-index:5}
+.logo{font-size:25px;font-weight:bold;color:#ff375f}
+.logo span{color:white}
+nav a{color:#ccc;text-decoration:none;margin:0 12px}
+.search{padding:10px 14px;border-radius:25px;border:1px solid #333;background:#1b2231;color:white;width:190px}
+.hero{min-height:380px;padding:55px 6%;display:flex;align-items:center;background:linear-gradient(90deg,#0b0e17 15%,rgba(11,14,23,.85),rgba(11,14,23,.2)),url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1400&q=80') center/cover}
+.hero h1{font-size:44px;margin:10px 0}
+.hero p{color:#ccc;max-width:480px;line-height:1.6}
+.btn{border:0;padding:12px 20px;border-radius:7px;background:#ff375f;color:white;font-weight:bold;cursor:pointer}
+section{padding:25px 5%}
+.section-title{font-size:22px;margin-bottom:18px}
+.movies{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+.movie{background:#151b29;border-radius:10px;overflow:hidden;cursor:pointer;transition:.2s}
+.movie:hover{transform:translateY(-5px)}
+.movie img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block}
+.movie h3{font-size:14px;margin:10px 9px 5px}
+.movie p{font-size:12px;color:#aaa;margin:5px 9px 12px}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.tabs button{padding:9px 15px;border:1px solid #30384b;background:#171d2b;color:white;border-radius:20px;cursor:pointer}
+.tabs button.active{background:#ff375f;border-color:#ff375f}
+#status{color:#aaa;margin:10px 0}
+.modal{display:none;position:fixed;inset:0;background:#000c;z-index:10;overflow:auto;padding:25px}
+.modal-content{max-width:800px;margin:30px auto;background:#151b29;border-radius:15px;padding:20px}
+.close{float:right;font-size:28px;cursor:pointer}
+.detail{display:flex;gap:20px;flex-wrap:wrap}
+.detail img{width:220px;border-radius:10px}
+.detail-text{flex:1;min-width:220px}
+.detail-text p{color:#ccc;line-height:1.6}
+footer{text-align:center;color:#888;padding:30px;border-top:1px solid #222}
+@media(max-width:900px){.movies{grid-template-columns:repeat(4,1fr)}nav{display:none}}
+@media(max-width:550px){.movies{grid-template-columns:repeat(2,1fr)}.hero h1{font-size:32px}.search{width:140px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">MOVIE <span>HUB</span></div>
+  <nav>
+    <a href="#home">Home</a>
+    <a href="#movies">Movies</a>
+    <a href="#trending">Trending</a>
+    <a href="#latest">Latest</a>
+  </nav>
+  <input class="search" id="search" placeholder="Search movies...">
+</header>
+
+<div class="hero" id="home">
+  <div>
+    <h1>Discover Movies</h1>
+    <p>Explore trending movies, new releases, popular films and movie trailers — all in one place.</p>
+    <button class="btn" onclick="loadTrending()">Explore Movies</button>
+  </div>
+</div>
+
+<section id="trending">
+  <h2 class="section-title">🔥 Trending Movies</h2>
+  <div class="movies" id="trendingMovies"></div>
+</section>
+
+<section id="movies">
+  <h2 class="section-title">🎬 Popular Movies</h2>
+  <div class="movies" id="popularMovies"></div>
+</section>
+
+<section id="latest">
+  <h2 class="section-title">🆕 Latest Releases</h2>
+  <div class="movies" id="latestMovies"></div>
+</section>
+
+<section>
+  <h2 class="section-title">🔎 Search Results</h2>
+  <div id="status"></div>
+  <div class="movies" id="searchResults"></div>
+</section>
+
+<div class="modal" id="modal">
+ <div class="modal-content">
+  <span class="close" onclick="closeModal()">×</span>
+  <div id="details"></div>
+ </div>
+</div>
+
+<footer>Movie Hub © 2026 | Movie information powered by TMDB</footer>
+
+<script>
+const API_KEY="Ybe9378c44a31f8c0bc56374bfb6ae172";
+const BASE="https://api.themoviedb.org/3";
+const IMG="https://image.tmdb.org/t/p/w500";
+
+async function api(path){
+ const res=await fetch(BASE+path+(path.includes("?")?"&":"?")+"api_key="+API_KEY);
+ if(!res.ok) throw new Error("API error");
+ return res.json();
+}
+
+function renderMovies(list,container){
+ container.innerHTML="";
+ list.forEach(m=>{
+  if(!m.poster_path)return;
+  const card=document.createElement("div");
+  card.className="movie";
+  card.innerHTML=`
+   <img src="${IMG+m.poster_path}" alt="${m.title||m.name}" loading="lazy">
+   <h3>${m.title||m.name}</h3>
+   <p>⭐ ${m.vote_average?m.vote_average.toFixed(1):"N/A"} | ${m.release_date||""}</p>`;
+  card.onclick=()=>showDetails(m.id);
+  container.appendChild(card);
+ });
+}
+
+async function loadTrending(){
+ try{
+  const d=await api("/trending/movie/week");
+  renderMovies(d.results,document.getElementById("trendingMovies"));
+ }catch(e){document.getElementById("status").textContent="Please add your TMDB API key first."}
+}
+
+async function loadPopular(){
+ try{
+  const d=await api("/movie/popular");
+  renderMovies(d.results,document.getElementById("popularMovies"));
+ }catch(e){}
+}
+
+async function loadLatest(){
+ try{
+  const d=await api("/movie/now_playing");
+  renderMovies(d.results,document.getElementById("latestMovies"));
+ }catch(e){}
+}
+
+async function showDetails(id){
+ try{
+  const m=await api("/movie/"+id);
+  const videos=await api("/movie/"+id+"/videos");
+  const trailer=videos.results.find(v=>v.site==="YouTube"&&v.type==="Trailer");
+  document.getElementById("details").innerHTML=`
+   <div class="detail">
+    <img src="${IMG+m.poster_path}">
+    <div class="detail-text">
+     <h2>${m.title}</h2>
+     <p>⭐ ${m.vote_average.toFixed(1)} | ${m.release_date||"Release date unknown"}</p>
+     <p>${m.overview||"No description available."}</p>
+     <p>Genres: ${m.genres.map(g=>g.name).join(", ")}</p>
+     ${trailer?`<a target="_blank" href="https://www.youtube.com/watch?v=${trailer.key}"><button class="btn">▶ Watch Trailer</button></a>`:""}
+    </div>
+   </div>`;
+  document.getElementById("modal").style.display="block";
+ }catch(e){}
+}
+
+function closeModal(){document.getElementById("modal").style.display="none"}
+
+document.getElementById("search").addEventListener("input",async e=>{
+ const q=e.target.value.trim();
+ if(q.length<2){document.getElementById("searchResults").innerHTML="";return}
+ try{
+  const d=await api("/search/movie?query="+encodeURIComponent(q));
+  renderMovies(d.results,document.getElementById("searchResults"));
+ }catch(e){
+  document.getElementById("status").textContent="Search needs a TMDB API key.";
+ }
+});
+
+loadTrending();
+loadPopular();
+loadLatest();
+</script>
+</body>
+</html>
